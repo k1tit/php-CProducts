@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/CProducts.php'; 
+
 $host = 'localhost';
 $user = 'root';
 $password = '12345678';
@@ -6,62 +8,42 @@ $database = 'my_database_name';
 
 header('Content-Type: application/json; charset=utf-8');
 
-$response = [];
+$products = new CProducts($host, $user, $password, $database);
 
-
-// Подключаемся к базе данных
-$mysqli = new mysqli($host, $user, $password, $database);
-
-if ($mysqli->connect_error) {
-    die(json_encode(['success' => false, 'error' => 'Database connection failed: ' . $mysqli->connect_error]));
-}
-
-$response = ['success' => false];
-
-// Проверяем, существует ли параметр 'action' в POST-запросе
-if (isset($_POST['action'])) {
-    $action = $_POST['action'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    $response = ['success' => false]; 
+    $action = $_POST['action']; 
 
     switch ($action) {
         case 'hideProduct':
-            // Проверяем, передан ли ID товара
-            if (isset($_POST['id'])) {
-                $id = (int)$_POST['id'];  // Преобразуем ID в целое число
-                // SQL-запрос для обновления статуса IS_HIDDEN
-                $query = "UPDATE Products SET IS_HIDDEN = 0 WHERE ID = ?";
-                $stmt = $mysqli->prepare($query);
-                $stmt->bind_param("i", $id);  // Привязываем ID
-                if ($stmt->execute()) {
-                    $response['success'] = true;  // Возвращаем успех
+            if (isset($_POST['id']) && is_numeric($_POST['id'])) {
+                $productId = (int)$_POST['id'];
+    
+                $result = $products->hideProduct($productId);
+                if ($result) {
+                    $response['success'] = true;
+                    $response['message'] = 'Product hidden successfully';
                 } else {
-                    $response['error'] = 'Не удалось скрыть товар';  // Ошибка выполнения
+                    $response['error'] = 'Failed to hide product. No rows affected.';
                 }
-                $stmt->close();
             } else {
-                $response['error'] = 'Product ID is missing';  // Если ID не передан
+                $response['error'] = 'Product ID is missing or invalid';
             }
-            break;
+            break;    
 
         case 'updateQuantity':
-            // Обработка запроса на обновление количества
+
             if (isset($_POST['id'], $_POST['quantity']) && is_numeric($_POST['id']) && is_numeric($_POST['quantity'])) {
                 $id = (int)$_POST['id'];
                 $quantity = (int)$_POST['quantity'];
 
-                // Проверка, что количество не отрицательное
-                if ($quantity < 0) {
-                    $response['error'] = 'Quantity cannot be negative';
+                $result = $products->updateQuantity($id, $quantity);
+
+                if ($result) {
+                    $response['success'] = true;
+                    $response['message'] = 'Quantity updated successfully';
                 } else {
-                    $stmt = $mysqli->prepare("UPDATE Products SET PRODUCT_QUANTITY = ? WHERE ID = ?");
-                    $stmt->bind_param('ii', $quantity, $id);
-
-                    if ($stmt->execute() && $stmt->affected_rows > 0) {
-                        $response['success'] = true;
-                    } else {
-                        $response['error'] = 'Failed to update quantity: ' . $stmt->error;
-                    }
-
-                    $stmt->close();
+                    $response['error'] = 'Failed to update quantity';
                 }
             } else {
                 $response['error'] = 'Product ID or quantity is missing or invalid';
@@ -72,10 +54,10 @@ if (isset($_POST['action'])) {
             $response['error'] = 'Unknown action: ' . $action; 
             break;
     }
-} else {
-    $response['error'] = 'Invalid request';
-}
 
-echo json_encode($response);
-$mysqli->close();
+    echo json_encode($response);
+} else {
+
+    echo json_encode(['success' => false, 'error' => 'Invalid request']);
+}
 ?>

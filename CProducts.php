@@ -28,18 +28,15 @@ class CProducts {
     }
 
     public function updateQuantity($id, $quantity) {
+        if ($quantity < 0) {
+            return false;
+        }
+    
         $stmt = $this->database->prepare("UPDATE Products SET PRODUCT_QUANTITY = ? WHERE ID = ?");
         $stmt->bind_param("ii", $quantity, $id);
+    
         return $stmt->execute();
     }
-
-    public function productExists($id) {
-        $stmt = $this->database->prepare("SELECT COUNT(*) FROM Products WHERE ID = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $stmt->bind_result($count);
-        $stmt->fetch();
-        return $count > 0;  
-    }   
+     
 }
 ?>

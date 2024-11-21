@@ -1,37 +1,18 @@
 <?php
-// Настройки базы данных
+
+require 'CProducts.php';
+
 $host = 'localhost';
 $user = 'root';
 $password = '12345678';
 $database = 'my_database_name';
+$limit = 20;
 
-// Подключаемся к базе данных
 $mysqli = new mysqli($host, $user, $password, $database);
 
-// Проверяем подключение
-if ($mysqli->connect_error) {
-    die("Ошибка подключения: " . $mysqli->connect_error);
-}
+$products = new CProducts($host, $user, $password, $database, $mysqli);
 
-// Исправленный запрос: выбираем все товары, но пропускаем скрытые
-$query = "SELECT * FROM Products"; // Выбираем все товары
-$result = $mysqli->query($query);
-
-$items = [];
-if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        // Пропускаем товары, если поле IS_HIDDEN равно 0 (скрыто)
- // Пропускаем скрытые товары
-if ($row['IS_HIDDEN'] == 1)
-{
-    $items[] = $row;
-}
-else 
-{
-    continue;
-}        
-    }
-}
+$items = $products->getProducts($limit);
 
 $mysqli->close();
 ?>
@@ -42,7 +23,7 @@ $mysqli->close();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Products</title>
     <style>
-        /* Стили страницы */
+
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
@@ -53,6 +34,7 @@ $mysqli->close();
             align-items: center;
             min-height: 100vh;
         }
+
         table {
             border-collapse: collapse;
             width: 90%;
@@ -62,40 +44,50 @@ $mysqli->close();
             border-radius: 8px;
             overflow: hidden;
         }
+
         th, td {
             padding: 12px 16px;
             text-align: center;
             border: 1px solid #ddd;
         }
+
         th {
             background-color: #f7f7f7;
             font-weight: bold;
             text-transform: uppercase;
         }
+
         tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+
         tr:hover {
             background-color: #f1f1f1;
         }
+
         button {
-            background-color: #4CAF50;
+            background-color: #4CAF50; 
             color: white;
             border: none;
             padding: 6px 12px;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 14px;
         }
+
         button:hover {
             background-color: #45a049;
         }
+
         .decrease {
-            background-color: #f44336;
+            background-color: #f44336; 
         }
+
         .decrease:hover {
             background-color: #e53935;
         }
     </style>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
@@ -112,58 +104,58 @@ $mysqli->close();
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody id="product-table">
-            <?php if (empty($items)): ?>
-                <tr>
-                    <td colspan="8">No products available.</td>
-                </tr>
-            <?php else: ?>
-                <?php foreach ($items as $item): ?>
-                    <tr data-id="<?= htmlspecialchars($item['ID']) ?>">
-                        <td><?= htmlspecialchars($item['ID']) ?></td>
-                        <td><?= htmlspecialchars($item['PRODUCT_ID']) ?></td>
-                        <td><?= htmlspecialchars($item['PRODUCT_NAME']) ?></td>
-                        <td><?= htmlspecialchars($item['PRODUCT_PRICE']) ?></td>
-                        <td><?= htmlspecialchars($item['PRODUCT_ARTICLE']) ?></td>
-                        <td>
-                            <button class="decrease">-</button>
-                            <span><?= htmlspecialchars($item['PRODUCT_QUANTITY']) ?></span>
-                            <button class="increase">+</button>
-                        </td>
-                        <td><?= htmlspecialchars($item['DATE_CREATE']) ?></td>
-                        <td><button class="hide-product" data-id="<?= htmlspecialchars($item['ID']) ?>">Hide</button></td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </tbody>
+<tbody id="product-table">
+    <?php if (empty($items)): ?>
+        <tr>
+            <td colspan="8">No products available.</td>
+        </tr>
+    <?php else: ?>
+        <?php foreach ($items as $item): ?>
+            <tr data-id="<?= htmlspecialchars($item['ID']) ?>">
+                <td><?= htmlspecialchars($item['ID']) ?></td>
+                <td><?= htmlspecialchars($item['PRODUCT_ID']) ?></td> 
+                <td><?= htmlspecialchars($item['PRODUCT_NAME']) ?></td>
+                <td><?= htmlspecialchars($item['PRODUCT_PRICE']) ?></td>
+                <td><?= htmlspecialchars($item['PRODUCT_ARTICLE']) ?></td>
+                <td>
+                    <button class="decrease">-</button>
+                    <span><?= htmlspecialchars($item['PRODUCT_QUANTITY']) ?></span>
+                    <button class="increase">+</button>
+                </td>
+                <td><?= htmlspecialchars($item['DATE_CREATE']) ?></td>
+                <td><button class="hide-product" data-id="<?= htmlspecialchars($item['ID']) ?>">Hide</button></td>
+            </tr>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</tbody>
     </table>
 
     <script>
         $(document).ready(function () {
-           
             $(".hide-product").click(function () {
-                const productId = $(this).data("id");  // Получаем ID товара
-                const row = $(this).closest('tr');  // Находим строку таблицы
+                const productId = $(this).data("id");  
+                const row = $(this).closest('tr');  
 
                 $.ajax({
-                    url: "products_actions.php",  // Путь к обработчику
+                    url: "products_actions.php",  
                     type: "POST",
-                    data: { action: "hideProduct", id: productId }, // Отправляем ID товара
+                    data: { action: "hideProduct", id: productId }, 
                     success: function (response) {
-                      //  const result = JSON.parse(response);
+     
                         if (response.success) {
                             alert("Product successfully hidden!");
-                            row.remove();
-                           // location.reload(true);    
+                            row.remove();  
                         } else {
-                            alert("Error: " + result.error);  // Показываем ошибку
+                            alert("Error: " + response.error); 
                         }
                     },
-
+                    error: function() {
+                        alert("Error sending request.");
+                    }
                 });
             });
 
-            // Изменение количества товара
+           
             $(document).on('click', '.increase, .decrease', function () {
                 const row = $(this).closest('tr');
                 const id = row.data('id');
@@ -173,10 +165,9 @@ $mysqli->close();
                 if ($(this).hasClass('increase')) quantity++;
                 if ($(this).hasClass('decrease') && quantity > 0) quantity--;
 
-                // Отправляем обновление количества на сервер
                 $.post('products_actions.php', { action: 'updateQuantity', id: id, quantity: quantity }, function (response) {
                     if (response.success) {
-                        span.text(quantity); // Обновляем количество в таблице
+                        span.text(quantity); 
                     } else {
                         alert('Failed to update quantity.');
                     }
